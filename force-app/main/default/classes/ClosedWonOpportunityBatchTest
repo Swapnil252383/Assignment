@@ -1,0 +1,182 @@
+@IsTest
+private class ClosedWonOpportunityBatchTest {
+
+    @IsTest
+    static void testClosedWonOpportunityBatch() {
+
+        Date processingDate = Date.today();
+
+        // Create Account
+        Account acc = new Account();
+
+        acc.Name = 'Test Account';
+
+        acc.Primary_Email__c =
+            'test@example.com';
+
+        insert acc;
+
+
+        // Closed Won Opportunity 1
+        Opportunity opp1 = new Opportunity();
+
+        opp1.Name = 'Opportunity 1';
+
+        opp1.AccountId = acc.Id;
+
+        opp1.StageName = 'Closed Won';
+
+        opp1.CloseDate = processingDate;
+
+        opp1.Amount = 50000;
+
+        // Closed Won Opportunity 2
+        Opportunity opp2 = new Opportunity();
+
+        opp2.Name = 'Opportunity 2';
+
+        opp2.AccountId = acc.Id;
+
+        opp2.StageName = 'Closed Won';
+
+        opp2.CloseDate = processingDate;
+
+        opp2.Amount = 30000;
+
+        // Closed Won Opportunity 3
+        Opportunity opp3 = new Opportunity();
+
+        opp3.Name = 'Opportunity 3';
+
+        opp3.AccountId = acc.Id;
+
+        opp3.StageName = 'Closed Won';
+
+        opp3.CloseDate = processingDate;
+
+        opp3.Amount = 20000;
+
+
+        // This Opportunity should NOT be included
+        Opportunity opp4 = new Opportunity();
+
+        opp4.Name = 'Open Opportunity';
+
+        opp4.AccountId = acc.Id;
+
+        opp4.StageName = 'Prospecting';
+
+        opp4.CloseDate = processingDate;
+
+        opp4.Amount = 100000;
+
+
+        // This Opportunity should NOT be included
+        // because it has a different date.
+        Opportunity opp5 = new Opportunity();
+
+        opp5.Name = 'Previous Day Opportunity';
+
+        opp5.AccountId = acc.Id;
+
+        opp5.StageName = 'Closed Won';
+
+        opp5.CloseDate =
+            processingDate.addDays(-1);
+
+        opp5.Amount = 40000;
+
+
+        insert new List<Opportunity>{
+            opp1,
+            opp2,
+            opp3,
+            opp4,
+            opp5
+        };
+
+
+        Test.startTest();
+
+        Database.executeBatch(
+            new ClosedWonOpportunityBatch(
+                processingDate
+            ),
+            200
+        );
+
+        Test.stopTest();
+
+
+        // One email should have been sent
+        System.assertEquals(
+            1,
+            Limits.getEmailInvocations()
+        );
+    }
+
+
+    @IsTest
+    static void testScheduler() {
+
+        Test.startTest();
+
+        String jobId = System.schedule(
+            'Test Closed Won Opportunity Scheduler',
+            '0 0 0 * * ?',
+            new ClosedWonOpportunityScheduler()
+        );
+
+        Test.stopTest();
+
+        System.assertNotEquals(
+            null,
+            jobId
+        );
+    }
+
+
+    @IsTest
+    static void testAccountWithoutPrimaryEmail() {
+
+        Account acc = new Account();
+
+        acc.Name = 'No Email Account';
+
+        insert acc;
+
+
+        Opportunity opp = new Opportunity();
+
+        opp.Name = 'Closed Won Opportunity';
+
+        opp.AccountId = acc.Id;
+
+        opp.StageName = 'Closed Won';
+
+        opp.CloseDate = Date.today();
+
+        opp.Amount = 10000;
+
+        insert opp;
+
+
+        Test.startTest();
+
+        Database.executeBatch(
+            new ClosedWonOpportunityBatch(
+                Date.today()
+            ),
+            200
+        );
+
+        Test.stopTest();
+
+
+        // No email should be sent
+        System.assertEquals(
+            0,
+            Limits.getEmailInvocations()
+        );
+    }
+}

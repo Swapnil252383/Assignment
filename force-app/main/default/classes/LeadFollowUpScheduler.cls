@@ -8,3 +8,12 @@ global class LeadFollowUpScheduler implements Schedulable {
         );
     }
 }
+
+
+
+
+System.schedule(
+    'Daily Lead Follow Up Job',
+    '0 37 10 * * ?',
+    new LeadFollowUpScheduler()
+);

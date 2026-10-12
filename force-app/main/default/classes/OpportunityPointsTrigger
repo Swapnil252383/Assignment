@@ -1,0 +1,54 @@
+trigger OpportunityPointsTrigger on Opportunity (
+    after insert,
+    after update,
+    after delete,
+    after undelete
+) {
+
+    Set<Id> accountIds = new Set<Id>();
+
+    // Insert and Undelete
+    if (Trigger.isInsert || Trigger.isUndelete) {
+
+        for (Opportunity opp : Trigger.new) {
+
+            if (opp.AccountId != null) {
+                accountIds.add(opp.AccountId);
+            }
+        }
+    }
+
+    // Update
+    if (Trigger.isUpdate) {
+
+        for (Opportunity opp : Trigger.new) {
+
+            // New Account
+            if (opp.AccountId != null) {
+                accountIds.add(opp.AccountId);
+            }
+
+            // Old Account
+            Opportunity oldOpp = Trigger.oldMap.get(opp.Id);
+
+            if (oldOpp.AccountId != null) {
+                accountIds.add(oldOpp.AccountId);
+            }
+        }
+    }
+
+    // Delete
+    if (Trigger.isDelete) {
+
+        for (Opportunity opp : Trigger.old) {
+
+            if (opp.AccountId != null) {
+                accountIds.add(opp.AccountId);
+            }
+        }
+    }
+
+    if (!accountIds.isEmpty()) {
+        OpportunityPointsHandler.updateAccountPoints(accountIds);
+    }
+}
